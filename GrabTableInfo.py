@@ -12,23 +12,65 @@ wpk_pixel_info = {
    "public_left_start": 155,  #公共牌左起始
    "public_top_start": 710,   #公共牌上部分起始
 
+   # 自身筹码
    "chip_left_start": 310,    #自己的筹码标志位置
    "chip_top_start": 1138,
    "chip_width": 100,
    "chip_len": 27,
 
+   # 自身action
+   "self_action_left_start": 220,
+   "self_action_top_start": 1020,
+   "action_width": 95,
+   "action_len": 30,
+
+   # 底池
    "pot_left": 370,
    "pot_top": 530,
    "pot_width": 100,
    "pot_len": 30,
+
+   # 跟注按钮信息
+   "call_left_start": 480,
+   "call_top_start": 1080,
+   "call_width": 120,
+   "call_len": 100,
 }
 
 big_blind = 4
 
 class GrabTableInfo:
-   #获取选手信息
+   # 获取选手信息
    def __init__(self, pixel_info):
       self.pixel_info = pixel_info 
+
+   # 获取跟注按钮信息
+   def get_call_button_info(self, image, debug = False):
+      ls = self.pixel_info["call_left_start"]
+      ts = self.pixel_info["call_top_start"]
+      box = (ls, ts, ls + self.pixel_info["call_width"] , ts + self.pixel_info["call_len"])
+      image_for_num = image.crop(box)
+      if debug:
+         image_for_num.show()
+      content = pytesseract.image_to_string(image_for_num).strip()
+
+      loggers.debug(content)
+
+   # 获取自身行为
+   def get_self_action(self, image, debug = False):
+      ls = self.pixel_info["self_action_left_start"]
+      ts = self.pixel_info["self_action_top_start"]
+      box = (ls, ts, ls + self.pixel_info["action_width"] , ts + self.pixel_info["action_len"])
+      image_for_num = image.crop(box)
+      if debug:
+         image_for_num.show()
+      content = pytesseract.image_to_string(image_for_num).strip()
+      content = ''.join(filter(str.isalpha, content))
+
+      loggers.debug(content)
+
+      if "traddle" in content:
+         return "straddle"
 
    # 获取手牌类型(为preFlop)
    def get_self_cards_type(self, cards, colors):
@@ -182,10 +224,14 @@ class GrabTableInfo:
 
 
 if __name__ == '__main__':
-   image = Image.open('cur_test.png') 
+   image = Image.open('images\cur_test_1613748187.5122187.png') 
+   image = Image.open('images\cur_test_1613748207.3536816.png') 
+   image = Image.open('images\cur_test_1613748201.7244549.png') 
+   image = Image.open('images\cur_test_1613749267.2990854.png') 
    grabTableInfo = GrabTableInfo(wpk_pixel_info)
-   grabTableInfo.get_public_card(image)
-   grabTableInfo.get_self_card(image)
-   grabTableInfo.get_self_blind(image)
-   grabTableInfo.get_pot(image)
+   #grabTableInfo.get_public_card(image)
+   #grabTableInfo.get_self_card(image)
+   #grabTableInfo.get_self_blind(image)
+   #grabTableInfo.get_pot(image)
+   grabTableInfo.get_call_button_info(image, True)
 
