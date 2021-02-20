@@ -35,26 +35,223 @@ wpk_pixel_info = {
    "call_top_start": 1080,
    "call_width": 120,
    "call_len": 100,
+
+   # button loc
+   "button_width": 50,
+   "button_len": 50,
+
+   "button_0_left": 250,
+   "button_0_top": 1100,
+
+   "button_1_left": 130,
+   "button_1_top": 900,
+
+   "button_2_left": 110,
+   "button_2_top": 690,
+
+   "button_3_left": 130,
+   "button_3_top": 440,
+
+   "button_4_left": 420,
+   "button_4_top": 290,
+
+   "button_5_left": 540,
+   "button_5_top": 440,
+
+   "button_6_left": 580,
+   "button_6_top": 690,
+
+   "button_7_left": 540,
+   "button_7_top": 900,
+
+   "players_fold_coor": {
+      "1": [35, 830, 80, 50],
+      "2": [35, 580, 80, 50],
+      "3": [35, 360, 80, 50],
+      "4": [325, 220, 80, 50],
+      "5": [610, 360, 80, 50],
+      "6": [610, 580, 80, 50],
+      "7": [610, 830, 80, 50],
+   },
+
+
+   "players_chip_coor":{
+      "0":[410, 1045, 110, 30],
+      "1": [142, 875, 70, 40],
+      "2": [142, 625, 70, 40],
+      "3": [142, 402, 70, 40],
+      "4": [330, 380, 70, 40],
+      "5": [512, 402, 70, 40],
+      "6": [512, 625, 70, 40],
+      "7": [512, 875, 70, 40],
+   }
 }
 
-big_blind = 4
+big_blind = 1.0
+
+table_2 = []
 
 class GrabTableInfo:
    # 获取选手信息
    def __init__(self, pixel_info):
       self.pixel_info = pixel_info 
 
-   # 获取跟注按钮信息
-   def get_call_button_info(self, image, debug = False):
-      ls = self.pixel_info["call_left_start"]
-      ts = self.pixel_info["call_top_start"]
-      box = (ls, ts, ls + self.pixel_info["call_width"] , ts + self.pixel_info["call_len"])
-      image_for_num = image.crop(box)
-      if debug:
-         image_for_num.show()
-      content = pytesseract.image_to_string(image_for_num).strip()
+   def image_to_2(self, image, shreshold):
+      image_l = image.convert('L')
+      table = []
+      for i in range(256):
+         if i < shreshold:
+            table.append(1)
+         else:
+            table.append(0)
+      return image_l.point(table, '1')
 
-      loggers.debug(content)
+   def isButton(self, image, box):
+      count = 0
+      for i in range(box[0], box[2]):
+         for j in range(box[1], box[3]):
+            pixel = image.getpixel((i, j))
+            if pixel[0] > 200 and pixel[1] > 200 and pixel[2] > 200:
+               count += 1
+      if count > 300:
+         return True
+
+   # 获取一个玩家的行动信息: Flod/Call/Raise
+   def get_player_info(self, image, loc, debug = False):
+      if self.isFold(image, loc, debug):
+         if debug:
+            loggers.debug("{0} Flod".format(loc))
+         return -1
+      else:
+         chip_num = self.get_player_put_chip(image, loc, debug) / big_blind
+         if debug:
+            loggers.debug("{0} put chip {1}".format(loc, chip_num))
+         return chip_num
+         
+
+   def get_player_put_chip(self, image, loc, debug = False):
+      ls = self.pixel_info["players_chip_coor"][str(loc)][0]
+      ts = self.pixel_info["players_chip_coor"][str(loc)][1]
+      width = self.pixel_info["players_chip_coor"][str(loc)][2]
+      hight = self.pixel_info["players_chip_coor"][str(loc)][3]
+      box = (ls, ts, ls + width , ts + hight)
+      image_for_flod = image.crop(box)
+      image_for_flod = self.image_to_2(image_for_flod, 160)
+
+      if debug:
+         image_for_flod.show()
+
+      content = pytesseract.image_to_string(image_for_flod, config="-psm 10000").strip()
+      if debug:
+         loggers.debug("{0} get_player_put_chip raw chip: {1}".format(loc, content))
+
+      content = content.replace("I", "1", 10)
+      num = "".join(filter(lambda ch: ch in '0123456789.', content))
+
+      try:
+         result = float(num)
+         return result
+      except:
+         return 0
+
+   # 确认当前玩家是否Flod
+   def isFold(self, image, loc, debug = False):
+      if loc == 0:
+         return False
+      ls = self.pixel_info["players_fold_coor"][str(loc)][0]
+      ts = self.pixel_info["players_fold_coor"][str(loc)][1]
+      width = self.pixel_info["players_fold_coor"][str(loc)][2]
+      hight = self.pixel_info["players_fold_coor"][str(loc)][3]
+      box = (ls, ts, ls + width , ts + hight)
+      image_for_flod = image.crop(box)
+      image_for_flod = self.image_to_2(image_for_flod, 180)
+      
+      if debug:
+         image_for_flod.show()
+
+      content = pytesseract.image_to_string(image_for_flod, config='-psm 100').strip()
+
+      if debug:
+         loggers.debug("{0} raw Fold info: {1}".format(loc, content))
+
+      if content == "Fold":
+         return True
+
+   # 找到button位置
+   def get_button_loc(self, image, debug = False):
+      ls = self.pixel_info["button_0_left"]
+      ts = self.pixel_info["button_0_top"]
+      box = (ls, ts, ls + self.pixel_info["button_width"] , ts + self.pixel_info["button_len"])
+      if debug:
+         image_for_num = image.crop(box)
+         image_for_num.show()
+
+      if self.isButton(image, box):
+         return 0
+      
+      ls = self.pixel_info["button_1_left"]
+      ts = self.pixel_info["button_1_top"]
+      box = (ls, ts, ls + self.pixel_info["button_width"] , ts + self.pixel_info["button_len"])
+      if debug:
+         image_for_num = image.crop(box)
+         image_for_num.show()
+
+      if self.isButton(image, box):
+         return 1
+
+      ls = self.pixel_info["button_2_left"]
+      ts = self.pixel_info["button_2_top"]
+      box = (ls, ts, ls + self.pixel_info["button_width"] , ts + self.pixel_info["button_len"])
+      if debug:
+         image_for_num = image.crop(box)
+         image_for_num.show()
+      if self.isButton(image, box):
+         return 2
+
+      ls = self.pixel_info["button_3_left"]
+      ts = self.pixel_info["button_3_top"]
+      box = (ls, ts, ls + self.pixel_info["button_width"] , ts + self.pixel_info["button_len"])
+      if debug:
+         image_for_num = image.crop(box)
+         image_for_num.show()
+      if self.isButton(image, box):
+         return 3
+
+      ls = self.pixel_info["button_4_left"]
+      ts = self.pixel_info["button_4_top"]
+      box = (ls, ts, ls + self.pixel_info["button_width"] , ts + self.pixel_info["button_len"])
+      if debug:
+         image_for_num = image.crop(box)
+         image_for_num.show()
+      if self.isButton(image, box):
+         return 4
+
+      ls = self.pixel_info["button_5_left"]
+      ts = self.pixel_info["button_5_top"]
+      box = (ls, ts, ls + self.pixel_info["button_width"] , ts + self.pixel_info["button_len"])
+      if debug:
+         image_for_num = image.crop(box)
+         image_for_num.show()
+      if self.isButton(image, box):
+         return 5
+
+      ls = self.pixel_info["button_6_left"]
+      ts = self.pixel_info["button_6_top"]
+      box = (ls, ts, ls + self.pixel_info["button_width"] , ts + self.pixel_info["button_len"])
+      if debug:
+         image_for_num = image.crop(box)
+         image_for_num.show()
+      if self.isButton(image, box):
+         return 6
+
+      ls = self.pixel_info["button_7_left"]
+      ts = self.pixel_info["button_7_top"]
+      box = (ls, ts, ls + self.pixel_info["button_width"] , ts + self.pixel_info["button_len"])
+      if debug:
+         image_for_num = image.crop(box)
+         image_for_num.show()
+      if self.isButton(image, box):
+         return 7
 
    # 获取自身行为
    def get_self_action(self, image, debug = False):
@@ -85,7 +282,8 @@ class GrabTableInfo:
       ls = self.pixel_info["self_left_start"]
       ts = self.pixel_info["self_top_start"]
       box = (ls, ts, ls + self.pixel_info["card_width"] * 2 , ts + self.pixel_info["card_len"])
-      image_for_num = image.crop(box).convert('L')
+      image_for_num = image.crop(box)
+      image_for_num = self.image_to_2(image_for_num, 180) 
       if debug:
          image_for_num.show()
       content = pytesseract.image_to_string(image_for_num, config=("-c tessedit"
@@ -120,7 +318,8 @@ class GrabTableInfo:
                   " --psm 10"
                   " -l osd"
                   " ")).strip()
-      loggers.debug("public picture result: {0}".format(content))
+      if debug:
+         loggers.debug("public picture result: {0}".format(content))
       cards = self.str_to_cards(content)
       if len(cards) < 3:
          cards = []
@@ -164,14 +363,14 @@ class GrabTableInfo:
       
    # 文字转牌型
    def str_to_cards(self, content):
-      char_range = ['2', '3', '4', '5','6','7', 'T','8','9','1', 'J', 'Q', '0','K', 'A']
+      char_range = ['2', '3', '4', '5','6','7', 'T','8','9','1', 'J', 'Q', '0', 'O', 'K', 'A']
       cards = []
       i = 0
       while i < len(content):
          if content[i] in char_range:
             if content[i] == 'J':               
                cards.append(11)
-            elif content[i] == 'Q' or content[i] == '0': #有时候Q会被识别为0
+            elif content[i] == 'Q' or content[i] == '0' or content[i] == 'O': #有时候Q会被识别为0, O
                cards.append(12)
             elif content[i] == 'K':
                cards.append(13)
@@ -222,16 +421,19 @@ class GrabTableInfo:
 
       return colors
 
-
 if __name__ == '__main__':
-   image = Image.open('images\cur_test_1613748187.5122187.png') 
-   image = Image.open('images\cur_test_1613748207.3536816.png') 
-   image = Image.open('images\cur_test_1613748201.7244549.png') 
-   image = Image.open('images\cur_test_1613749267.2990854.png') 
+   image = Image.open('images\cur_test_1613801326.6396046.png') 
    grabTableInfo = GrabTableInfo(wpk_pixel_info)
    #grabTableInfo.get_public_card(image)
-   #grabTableInfo.get_self_card(image)
+   #grabTableInfo.get_self_card(image, True)
    #grabTableInfo.get_self_blind(image)
    #grabTableInfo.get_pot(image)
-   grabTableInfo.get_call_button_info(image, True)
-
+   #button_loc = grabTableInfo.get_button_loc(image, True)
+   #loggers.debug(button_loc)
+   grabTableInfo.get_player_info(image, 1)
+   grabTableInfo.get_player_info(image, 2)
+   grabTableInfo.get_player_info(image, 3)
+   grabTableInfo.get_player_info(image, 4)
+   grabTableInfo.get_player_info(image, 5)
+   grabTableInfo.get_player_info(image, 6)
+   grabTableInfo.get_player_info(image, 7)

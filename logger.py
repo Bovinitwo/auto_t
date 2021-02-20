@@ -16,7 +16,7 @@ class Loggers:
     def __init__(self):
         # 设置输出格式
         formater = logging.Formatter(
-            '[%(asctime)s]-[%(levelname)s]-[%(filename)s]-[%(funcName)s:%(lineno)d] : %(message)s')
+            '[%(asctime)s]-[%(levelname)s] : %(message)s')
         # 定义一个日志收集器
         self.logger = logging.getLogger('log')
         # 设定级别

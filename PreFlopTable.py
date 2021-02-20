@@ -1,6 +1,6 @@
 from enum import Enum
 
-class PreOp(Enum):
+class PreOp():
     potBet = 1 #任何情况都一个底池加注
     call3Bet = 2 #任何情况都call 3 bet
     notCall3Bet = 3 #不call 3 bet
@@ -16,10 +16,10 @@ preFlopCardTable = {
     "1413o": PreOp.potBet, # AKo
     "1412s": PreOp.notCall3Bet, # AQs
     "1412o": PreOp.notCall3Bet, # AQo
-    "1411s": PreOp.notCall3Bet, # AJs
-    "1411o": PreOp.notCall3Bet, # AJo
-    "1410s": PreOp.justSpecailLoc,
-    "1410o": PreOp.notCallOpen, # ATs
+    "1411s": PreOp.callOpen, # AJs
+    "1411o": PreOp.callOpen, # AJo
+    "1410s": PreOp.justSpecailLoc, # ATs
+    "1410o": PreOp.notCallOpen, # ATo
 
     # k挂
     "1313o": PreOp.potBet, # KK
