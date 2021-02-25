@@ -12,13 +12,13 @@ class PreOp():
 preFlopCardTable = {
     # A挂
     "1414o": PreOp.potBet, # AA
-    "1413s": PreOp.potBet, # AKs
-    "1413o": PreOp.potBet, # AKo
+    "1413s": PreOp.call3Bet, # AKs
+    "1413o": PreOp.call3Bet, # AKo
     "1412s": PreOp.notCall3Bet, # AQs
     "1412o": PreOp.notCall3Bet, # AQo
     "1411s": PreOp.callOpen, # AJs
     "1411o": PreOp.callOpen, # AJo
-    "1410s": PreOp.justSpecailLoc, # ATs
+    "1410s": PreOp.callOpen, # ATs
     "1410o": PreOp.notCallOpen, # ATo
 
     # k挂

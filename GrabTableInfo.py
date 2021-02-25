@@ -25,7 +25,7 @@ wpk_pixel_info = {
    "action_len": 30,
 
    # 底池
-   "pot_left": 370,
+   "pot_left": 360,
    "pot_top": 530,
    "pot_width": 100,
    "pot_len": 30,
@@ -84,6 +84,17 @@ wpk_pixel_info = {
       "5": [512, 402, 70, 40],
       "6": [512, 625, 70, 40],
       "7": [512, 875, 70, 40],
+   },
+
+   "player_left_chip":{
+      "0":[310, 1140, 100, 30],
+      "1": [30, 915, 100, 30],
+      "2": [30, 665, 100, 30],
+      "3": [30, 441, 100, 30],
+      "4": [310, 310, 100, 30],
+      "5": [597, 441, 100, 30],
+      "6": [597, 665, 100, 30],
+      "7": [597, 915, 100, 30],
    }
 }
 
@@ -129,12 +140,13 @@ class GrabTableInfo:
          return chip_num
          
 
+   # 获取玩家放下的筹码
    def get_player_put_chip(self, image, loc, debug = False):
       ls = self.pixel_info["players_chip_coor"][str(loc)][0]
       ts = self.pixel_info["players_chip_coor"][str(loc)][1]
       width = self.pixel_info["players_chip_coor"][str(loc)][2]
-      hight = self.pixel_info["players_chip_coor"][str(loc)][3]
-      box = (ls, ts, ls + width , ts + hight)
+      height = self.pixel_info["players_chip_coor"][str(loc)][3]
+      box = (ls, ts, ls + width , ts + height)
       image_for_flod = image.crop(box)
       image_for_flod = self.image_to_2(image_for_flod, 160)
 
@@ -146,7 +158,40 @@ class GrabTableInfo:
          loggers.debug("{0} get_player_put_chip raw chip: {1}".format(loc, content))
 
       content = content.replace("I", "1", 10)
+      content = content.replace("l", "1", 10)
       num = "".join(filter(lambda ch: ch in '0123456789.', content))
+
+      try:
+         result = float(num)
+         return result
+      except:
+         return 0
+      
+   # 获取玩家剩余筹码
+   def get_player_left_chip(self, image, loc, debug = False):
+      ls = self.pixel_info["player_left_chip"][str(loc)][0]
+      ts = self.pixel_info["player_left_chip"][str(loc)][1]
+      width = self.pixel_info["player_left_chip"][str(loc)][2]
+      height = self.pixel_info["player_left_chip"][str(loc)][3]
+      box = (ls, ts, ls + width, ts + height)
+      image_for_flod = image.crop(box)
+      image_for_flod = self.image_to_2(image_for_flod, 220)
+
+      if debug:
+         image_for_flod.show()
+
+      content = pytesseract.image_to_string(image_for_flod, config="-psm 10000").strip()
+      if debug:
+         loggers.debug("{0} get_player_left_chip raw chip: {1}".format(loc, content))
+
+      content = content.replace("I", "1", 10)
+      content = content.replace("l", "1", 10)
+      content = content.replace("Z", "2", 10)
+      content = content.replace("O", "0", 10)
+      num = "".join(filter(lambda ch: ch in '0123456789.', content))
+
+      if debug:
+         loggers.debug("{0} get_player_left_chip raw chip: {1}".format(loc, content))
 
       try:
          result = float(num)
@@ -174,7 +219,7 @@ class GrabTableInfo:
       if debug:
          loggers.debug("{0} raw Fold info: {1}".format(loc, content))
 
-      if content == "Fold":
+      if "F" in content and 'd' in content :
          return True
 
    # 找到button位置
@@ -253,6 +298,7 @@ class GrabTableInfo:
       if self.isButton(image, box):
          return 7
 
+   '''
    # 获取自身行为
    def get_self_action(self, image, debug = False):
       ls = self.pixel_info["self_action_left_start"]
@@ -268,6 +314,7 @@ class GrabTableInfo:
 
       if "traddle" in content:
          return "straddle"
+   '''
 
    # 获取手牌类型(为preFlop)
    def get_self_cards_type(self, cards, colors):
@@ -355,7 +402,7 @@ class GrabTableInfo:
       ts = self.pixel_info["pot_top"]
       box = (ls, ts, ls + self.pixel_info["pot_width"] , ts + self.pixel_info["pot_len"])
       image_for_num = image.crop(box)
-      image_for_num.show()
+      #image_for_num.show()
       content = pytesseract.image_to_string(image_for_num).strip()[1:]
       bb_num = float(content) / big_blind
       print(bb_num)
@@ -363,14 +410,14 @@ class GrabTableInfo:
       
    # 文字转牌型
    def str_to_cards(self, content):
-      char_range = ['2', '3', '4', '5','6','7', 'T','8','9','1', 'J', 'Q', '0', 'O', 'K', 'A']
+      char_range = ['2', '3', '4', '5','6','7', 'T','8','9','1', 'J', 'Q', '0', 'O', "D", 'K', 'A']
       cards = []
       i = 0
       while i < len(content):
          if content[i] in char_range:
             if content[i] == 'J':               
                cards.append(11)
-            elif content[i] == 'Q' or content[i] == '0' or content[i] == 'O': #有时候Q会被识别为0, O
+            elif content[i] == 'Q' or content[i] == '0' or content[i] == 'O' or content[i] == 'D': #有时候Q会被识别为0, O,D
                cards.append(12)
             elif content[i] == 'K':
                cards.append(13)
@@ -422,7 +469,7 @@ class GrabTableInfo:
       return colors
 
 if __name__ == '__main__':
-   image = Image.open('images\cur_test_1613801326.6396046.png') 
+   image = Image.open('images\cur_test_1614104222.9695358.png') 
    grabTableInfo = GrabTableInfo(wpk_pixel_info)
    #grabTableInfo.get_public_card(image)
    #grabTableInfo.get_self_card(image, True)
@@ -430,6 +477,8 @@ if __name__ == '__main__':
    #grabTableInfo.get_pot(image)
    #button_loc = grabTableInfo.get_button_loc(image, True)
    #loggers.debug(button_loc)
+
+   '''
    grabTableInfo.get_player_info(image, 1)
    grabTableInfo.get_player_info(image, 2)
    grabTableInfo.get_player_info(image, 3)
@@ -437,3 +486,14 @@ if __name__ == '__main__':
    grabTableInfo.get_player_info(image, 5)
    grabTableInfo.get_player_info(image, 6)
    grabTableInfo.get_player_info(image, 7)
+   '''
+
+   players_left_chips = []
+   for i in range(8):
+      debug = False
+      if i == 0:
+         debug = True
+      num = grabTableInfo.get_player_left_chip(image, i, debug)
+      players_left_chips.append(num)
+
+   print(players_left_chips)
