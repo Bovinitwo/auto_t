@@ -25,7 +25,7 @@ wpk_pixel_info = {
    "action_len": 30,
 
    # 底池
-   "pot_left": 360,
+   "pot_left": 325,
    "pot_top": 530,
    "pot_width": 100,
    "pot_len": 30,
@@ -175,7 +175,7 @@ class GrabTableInfo:
       height = self.pixel_info["player_left_chip"][str(loc)][3]
       box = (ls, ts, ls + width, ts + height)
       image_for_flod = image.crop(box)
-      image_for_flod = self.image_to_2(image_for_flod, 220)
+      image_for_flod = self.image_to_2(image_for_flod, 210)
 
       if debug:
          image_for_flod.show()
@@ -402,10 +402,10 @@ class GrabTableInfo:
       ts = self.pixel_info["pot_top"]
       box = (ls, ts, ls + self.pixel_info["pot_width"] , ts + self.pixel_info["pot_len"])
       image_for_num = image.crop(box)
-      #image_for_num.show()
-      content = pytesseract.image_to_string(image_for_num).strip()[1:]
+      image_for_num.show()
+      content = pytesseract.image_to_string(image_for_num).strip()
+      content = "".join(filter(lambda ch: ch in '0123456789.', content))
       bb_num = float(content) / big_blind
-      print(bb_num)
       return bb_num
       
    # 文字转牌型

@@ -65,6 +65,7 @@ class PreFlopAlgorithm():
             if pre_actions[i] > cur_max:
                 bet_num += 1
                 cur_max = pre_actions[i]
+                called_num = 0
             elif pre_actions[i] == cur_max:
                 called_num += 1
         
@@ -94,7 +95,7 @@ class PreFlopAlgorithm():
 
         # 底池赔率
         odds_to_call = chip_to_call / float(chip_to_call + pot)
-        bet_player_left_chip = pre_actions[first_max_bet_loc]
+        bet_player_left_chip = player_left_chip[first_max_bet_loc]
 
         ret = {}
         ret["actioned"] = actioned
@@ -106,6 +107,8 @@ class PreFlopAlgorithm():
         ret["chip_to_call"] = chip_to_call
         ret["odds_to_call"] = odds_to_call
         ret["bet_player_left_chip"] = bet_player_left_chip
+        ret["button_loc"] = button_loc
+        ret["max_bet"] = max(pre_actions)
 
         loggers.info(ret)
 
@@ -311,7 +314,7 @@ if __name__ == "__main__":
         loggers.debug("save image: {0}".format(save_file))
         screenShot.shot(save_file, pic_loc)
         if debug:
-            save_file = "images\cur_test_1614102765.4198463"
+            save_file = "images\cur_test_1614353669.7127104"
 
         image = Image.open(save_file + ".png")
 
@@ -340,6 +343,11 @@ if __name__ == "__main__":
         for i in range(8):
             playerLeftChips.append(grabTableInfo.get_player_left_chip(image, i))
         loggers.debug("player left chips: {0}".format(playerLeftChips))
+
+        # 如果筹码数量大于100 BB 则重新上桌
+        if playerLeftChips[0] > 100:
+            loggers.info("over 100 BB replayer in table")
+            exit 0
 
         # 获取公共牌
         public_cards, public_colors = grabTableInfo.get_public_card(image)
